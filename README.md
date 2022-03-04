@@ -1,2 +1,4 @@
 # yew-dapp-examples
-Build Dapp with yew.rs
+- [x] Solana Dapp example
+- [ ] Near Protocol Dapp example
+- [ ] Ethereum Dapp example

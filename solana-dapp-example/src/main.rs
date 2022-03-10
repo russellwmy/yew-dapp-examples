@@ -3,6 +3,7 @@ mod phantom;
 mod phantom_connect;
 
 use phantom_connect::PhantomConnect;
+use wasm_logger;
 use yew::prelude::*;
 
 #[function_component(App)]
@@ -17,5 +18,6 @@ fn app() -> Html {
 }
 
 fn main() {
+    wasm_logger::init(wasm_logger::Config::default());
     yew::start_app::<App>();
 }

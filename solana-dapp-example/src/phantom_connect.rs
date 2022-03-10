@@ -1,6 +1,10 @@
 use super::phantom::{solana, ConnectResponse};
 use wasm_bindgen_futures::spawn_local;
-use yew::{function_component, html, Callback, Html, MouseEvent, Properties};
+use yew::{function_component, html, Callback, Html, MouseEvent, Properties,  use_state};
+use std::ops::Deref;
+use log;
+
+use super::button::Button;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -10,29 +14,54 @@ pub struct Props {
 
 #[function_component]
 pub fn PhantomConnect(_: &Props) -> Html {
-    let handle_click = move |_| {
-        spawn_local(async move {
-            let response = solana.connect().await;
-            log::info!("connection: {}", solana.is_connected());
-            if solana.is_connected() {
-                let response: ConnectResponse = response.into_serde().unwrap();
-                log::info!("key: {}", response.public_key);
-            }
-        });
+    let account_handle = use_state(|| "".to_string());
+    let account = account_handle.deref().clone();
+    let has_account = account.trim().is_empty();
+
+    let handle_click = Callback::from(move |_: MouseEvent| {
+        let account_handle = account_handle.clone();
+        let account = account_handle.deref().clone();
+
+        spawn_local(async move {        
+            match account != "".to_string() {
+                true => {
+                    let response = solana.disconnect().await;
+                    log::info!("disconnected: {:?}", response);
+                    account_handle.set("".to_string());
+            
+                }
+                _ => {
+                    let response = solana.connect().await;
+                    log::info!("connected: {:?}", solana.is_connected());
+                    if solana.is_connected() {
+                        let response: ConnectResponse = response.into_serde().unwrap();
+                        log::info!("disconnected: {:?}", response.public_key);
+                        account_handle.set(response.public_key)
+                    }
+                }
+            };   
+        });        
+    });
+
+    let connect_hint_text =  match has_account {
+        true => "Connect to Phantom Wallet".to_owned(),
+        false => format!("Connected to {:?}", account)
+    };
+
+    let connect_text =  match has_account {
+        true => "Login Phantom",
+        false => "Logout Phantom"
     };
 
     html! {
-        <button
-            onclick={handle_click}
-            class="flex justify-between items-center cursor-pointer py-3 px-5 rounded-md bg-neutral-600 hover:bg-neutral-700"
-        >
-            <span>
-                {"Phantom"}
-            </span>
-            <img
-                class="w-6 h-6"
-                src="data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjM0IiB3aWR0aD0iMzQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGxpbmVhckdyYWRpZW50IGlkPSJhIiB4MT0iLjUiIHgyPSIuNSIgeTE9IjAiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM1MzRiYjEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1NTFiZjkiLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0iYiIgeDE9Ii41IiB4Mj0iLjUiIHkxPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZmZmIiBzdG9wLW9wYWNpdHk9Ii44MiIvPjwvbGluZWFyR3JhZGllbnQ+PGNpcmNsZSBjeD0iMTciIGN5PSIxNyIgZmlsbD0idXJsKCNhKSIgcj0iMTciLz48cGF0aCBkPSJtMjkuMTcwMiAxNy4yMDcxaC0yLjk5NjljMC02LjEwNzQtNC45NjgzLTExLjA1ODE3LTExLjA5NzUtMTEuMDU4MTctNi4wNTMyNSAwLTEwLjk3NDYzIDQuODI5NTctMTEuMDk1MDggMTAuODMyMzctLjEyNDYxIDYuMjA1IDUuNzE3NTIgMTEuNTkzMiAxMS45NDUzOCAxMS41OTMyaC43ODM0YzUuNDkwNiAwIDEyLjg0OTctNC4yODI5IDEzLjk5OTUtOS41MDEzLjIxMjMtLjk2MTktLjU1MDItMS44NjYxLTEuNTM4OC0xLjg2NjF6bS0xOC41NDc5LjI3MjFjMCAuODE2Ny0uNjcwMzggMS40ODQ3LTEuNDkwMDEgMS40ODQ3LS44MTk2NCAwLTEuNDg5OTgtLjY2ODMtMS40ODk5OC0xLjQ4NDd2LTIuNDAxOWMwLS44MTY3LjY3MDM0LTEuNDg0NyAxLjQ4OTk4LTEuNDg0Ny44MTk2MyAwIDEuNDkwMDEuNjY4IDEuNDkwMDEgMS40ODQ3em01LjE3MzggMGMwIC44MTY3LS42NzAzIDEuNDg0Ny0xLjQ4OTkgMS40ODQ3LS44MTk3IDAtMS40OS0uNjY4My0xLjQ5LTEuNDg0N3YtMi40MDE5YzAtLjgxNjcuNjcwNi0xLjQ4NDcgMS40OS0xLjQ4NDcuODE5NiAwIDEuNDg5OS42NjggMS40ODk5IDEuNDg0N3oiIGZpbGw9InVybCgjYikiLz48L3N2Zz4K"
-            />
-        </button>
+        <>
+            <h1  class="p-10 text-xl font-bold">
+                { connect_hint_text }
+            </h1>
+            <Button 
+                value={ connect_text }
+                onclick={handle_click}
+            />            
+        </>
     }
 }
